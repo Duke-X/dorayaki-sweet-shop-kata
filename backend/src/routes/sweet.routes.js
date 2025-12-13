@@ -2,6 +2,7 @@ const express = require("express");
 const Sweet = require("../models/Sweet");
 const authMiddleware = require("../middleware/auth.middleware");
 const adminMiddleware = require("../middleware/admin.middleware");
+const upload = require("../middleware/upload.middleware");
 const router = express.Router();
 
 router.get("/", authMiddleware, async (req, res) => {
@@ -9,10 +10,14 @@ router.get("/", authMiddleware, async (req, res) => {
   res.status(200).json(sweets);
 });
 
-router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
+router.post("/", authMiddleware, adminMiddleware, upload.single("image"), async (req, res) => {
   const { name, category, price, quantity } = req.body;
 
-  await Sweet.create({ name, category, price, quantity });
+  if (!req.file) {
+    return res.status(400).json({ message: "Image is required" });
+  }
+
+  await Sweet.create({ name, category, price, quantity, imageUrl: req.file.path });
 
   res.status(201).json({ message: "Sweet added successfully" });
 });
