@@ -2,7 +2,7 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const app = require("../app");
-const User = require("../models/User")
+const User = require("../models/User");
 
 beforeAll(async () => {
   await connectDB();
@@ -59,18 +59,57 @@ describe("Auth: User Registration", () => {
 
   it("should store hashed password instead of plain text", async () => {
     const plainPassword = "mypassword123";
-  
-    await request(app)
-      .post("/api/auth/register")
-      .send({
-        name: "Secure User",
-        email: "secure@mail.com",
-        password: plainPassword,
-      });
-  
+
+    await request(app).post("/api/auth/register").send({
+      name: "Secure User",
+      email: "secure@mail.com",
+      password: plainPassword,
+    });
+
     const user = await User.findOne({ email: "secure@mail.com" });
-  
+
     expect(user.password).not.toBe(plainPassword);
   });
+});
 
+describe("Auth: User Login", () => {
+  it("should login user with correct credentials", async () => {
+    await request(app).post("/api/auth/register").send({
+      name: "Login User",
+      email: "login@mail.com",
+      password: "password123",
+    });
+
+    const res = await request(app).post("/api/auth/login").send({
+      email: "login@mail.com",
+      password: "password123",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("token");
+  });
+
+  it("should reject login with wrong password", async () => {
+    await request(app).post("/api/auth/register").send({
+      name: "Wrong Pass",
+      email: "wrong@mail.com",
+      password: "password123",
+    });
+
+    const res = await request(app).post("/api/auth/login").send({
+      email: "wrong@mail.com",
+      password: "wrongpass",
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject login if user does not exist", async () => {
+    const res = await request(app).post("/api/auth/login").send({
+      email: "nouser@mail.com",
+      password: "password123",
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
 });
