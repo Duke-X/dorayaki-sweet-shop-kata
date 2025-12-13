@@ -1,5 +1,23 @@
 const request = require("supertest");
+const mongoose = require("mongoose");
+const connectDB = require("../config/db");
 const app = require("../app");
+
+beforeAll(async () => {
+  await connectDB();
+});
+
+beforeEach(async () => {
+  const collections = await mongoose.connection.db.collections();
+
+  for (let collection of collections) {
+    await collection.deleteMany({});
+  }
+});
+
+afterAll(async () => {
+  await mongoose.connection.close();
+});
 
 describe("Auth: User Registration", () => {
   it("should register a new user successfully", async () => {
