@@ -114,7 +114,7 @@ describe("Sweets API - View Sweets", () => {
       { userId: "admin123", role: "admin" },
       process.env.JWT_SECRET
     );
-  
+
     const createRes = await request(app)
       .post("/api/sweets")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -124,15 +124,15 @@ describe("Sweets API - View Sweets", () => {
         price: 200,
         quantity: 30,
       });
-  
+
     expect(createRes.statusCode).toBe(201);
-  
+
     const getRes = await request(app)
       .get("/api/sweets")
       .set("Authorization", `Bearer ${adminToken}`);
-  
+
     const sweetId = getRes.body[0]._id;
-  
+
     const updateRes = await request(app)
       .put(`/api/sweets/${sweetId}`)
       .set("Authorization", `Bearer ${adminToken}`)
@@ -140,8 +140,76 @@ describe("Sweets API - View Sweets", () => {
         price: 250,
         quantity: 25,
       });
-  
+
     expect(updateRes.statusCode).toBe(200);
   });
-  
+
+  it("should allow admin to delete a sweet", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Peda",
+        category: "sweet",
+        price: 180,
+        quantity: 20,
+      });
+
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const sweetId = sweetsRes.body[0]._id;
+
+    const deleteRes = await request(app)
+      .delete(`/api/sweets/${sweetId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(deleteRes.statusCode).toBe(200);
+
+    const verifyRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(verifyRes.body.length).toBe(0);
+  });
+
+  it("should block non-admin users from deleting a sweet", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+
+    const userToken = jwt.sign(
+      { userId: "user123", role: "user" },
+      process.env.JWT_SECRET
+    );
+
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Soan Papdi",
+        category: "sweet",
+        price: 220,
+        quantity: 30,
+      });
+
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const sweetId = sweetsRes.body[0]._id;
+
+    const res = await request(app)
+      .delete(`/api/sweets/${sweetId}`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.statusCode).toBe(403);
+  });
 });
