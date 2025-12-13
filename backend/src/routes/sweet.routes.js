@@ -5,32 +5,53 @@ const adminMiddleware = require("../middleware/admin.middleware");
 const router = express.Router();
 
 router.get("/", authMiddleware, async (req, res) => {
-    const sweets = await Sweet.find();
-    res.status(200).json(sweets);
+  const sweets = await Sweet.find();
+  res.status(200).json(sweets);
+});
+
+router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
+  const { name, category, price, quantity } = req.body;
+
+  await Sweet.create({ name, category, price, quantity });
+
+  res.status(201).json({ message: "Sweet added successfully" });
+});
+
+router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  await Sweet.findByIdAndUpdate(id, req.body);
+
+  res.status(200).json({ message: "Sweet updated successfully" });
+});
+
+router.delete("/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  await Sweet.findByIdAndDelete(id);
+
+  res.status(200).json({ message: "Sweet deleted successfully" });
+});
+
+router.post("/:id/purchase", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { quantity } = req.body;
+
+  const sweet = await Sweet.findById(id);
+
+  if (!sweet) {
+    return res.status(400).json({ message: "Sweet not found" });
+  }
+  if (quantity <= 0 || quantity > sweet.quantity) {
+    return res.status(400).json({ message: "Insufficient stock" });
+  }
+  sweet.quantity -= quantity;
+  await sweet.save();
+
+  res.status(200).json({
+    message: "Purchase successful",
+    remainingQuantity: sweet.quantity,
   });
-
-router.post("/", authMiddleware, adminMiddleware, async(req, res) => {
-    const {name, category, price, quantity} = req.body;
-
-    await Sweet.create({name, category, price, quantity});
-
-    res.status(201).json({message: "Sweet added successfully"})
-});
-
-router.put("/:id", authMiddleware, adminMiddleware, async(req, res) => {
-    const {id} = req.params;
-
-    await Sweet.findByIdAndUpdate(id, req.body);
-
-    res.status(200).json({message: "Sweet updated successfully"});
-});
-
-router.delete("/:id", authMiddleware, adminMiddleware, async(req, res) => {
-    const {id} = req.params;
-
-    await Sweet.findByIdAndDelete(id);
-
-    res.status(200).json({message: "Sweet deleted successfully"});
 });
 
 module.exports = router;

@@ -212,4 +212,80 @@ describe("Sweets API - View Sweets", () => {
 
     expect(res.statusCode).toBe(403);
   });
+
+  it("should allow user to purchase a sweet and reduce quantity", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+
+    const userToken = jwt.sign(
+      { userId: "user123", role: "user" },
+      process.env.JWT_SECRET
+    );
+
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Gulab Jamun",
+        category: "sweet",
+        price: 250,
+        quantity: 10,
+      });
+
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    const sweetId = sweetsRes.body[0]._id;
+
+    const purchaseRes = await request(app)
+      .post(`/api/sweets/${sweetId}/purchase`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ quantity: 3 });
+
+    expect(purchaseRes.statusCode).toBe(200);
+
+    const verifyRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(verifyRes.body[0].quantity).toBe(7);
+  });
+
+  it("should not allow purchase if quantity is insufficient", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+
+    const userToken = jwt.sign(
+      { userId: "user123", role: "user" },
+      process.env.JWT_SECRET
+    );
+
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Kalakand",
+        category: "sweet",
+        price: 300,
+        quantity: 2,
+      });
+
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    const sweetId = sweetsRes.body[0]._id;
+
+    const res = await request(app)
+      .post(`/api/sweets/${sweetId}/purchase`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ quantity: 5 });
+
+    expect(res.statusCode).toBe(400);
+  });
 });
