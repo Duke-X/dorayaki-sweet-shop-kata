@@ -1,6 +1,7 @@
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
 const authMiddleware = require("./middleware/auth.middleware");
+const sweetRoutes = require("./routes/sweet.routes");
 const adminMiddleware = require("./middleware/admin.middleware");
 const app = express();
 
@@ -19,5 +20,6 @@ app.get("/admin-only", authMiddleware, adminMiddleware, (req, res) => {
 })
 
 app.use("/api/auth", authRoutes);
+app.use("/api/sweets", sweetRoutes);
 
 module.exports = app;
