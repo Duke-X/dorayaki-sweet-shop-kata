@@ -15,6 +15,14 @@ router.post("/", authMiddleware, adminMiddleware, async(req, res) => {
     await Sweet.create({name, category, price, quantity});
 
     res.status(201).json({message: "Sweet added successfully"})
+});
+
+router.put("/:id", authMiddleware, adminMiddleware, async(req, res) => {
+    const {id} = req.params;
+
+    await Sweet.findByIdAndUpdate(id, req.body);
+
+    res.status(200).json({message: "Sweet updated successfully"});
 })
 
 module.exports = router;

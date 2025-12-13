@@ -41,7 +41,7 @@ describe("Sweets API - View Sweets", () => {
       { userId: "admin123", role: "admin" },
       process.env.JWT_SECRET
     );
-  
+
     const res = await request(app)
       .post("/api/sweets")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -51,7 +51,7 @@ describe("Sweets API - View Sweets", () => {
         price: 400,
         quantity: 20,
       });
-  
+
     expect(res.statusCode).toBe(201);
   });
 
@@ -60,7 +60,7 @@ describe("Sweets API - View Sweets", () => {
       { userId: "user123", role: "user" },
       process.env.JWT_SECRET
     );
-  
+
     const res = await request(app)
       .post("/api/sweets")
       .set("Authorization", `Bearer ${userToken}`)
@@ -70,8 +70,78 @@ describe("Sweets API - View Sweets", () => {
         price: 300,
         quantity: 50,
       });
-  
+
     expect(res.statusCode).toBe(403);
   });
 
+  it("should allow admin to update a sweet", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+
+    const createRes = await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Rasgulla",
+        category: "sweet",
+        price: 200,
+        quantity: 30,
+      });
+
+    expect(createRes.statusCode).toBe(201);
+
+    const getRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const sweetId = getRes.body[0]._id;
+
+    const updateRes = await request(app)
+      .put(`/api/sweets/${sweetId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        price: 250,
+        quantity: 25,
+      });
+
+    expect(updateRes.statusCode).toBe(200);
+  });
+
+  it("should allow admin to update a sweet", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+  
+    const createRes = await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Rasgulla",
+        category: "sweet",
+        price: 200,
+        quantity: 30,
+      });
+  
+    expect(createRes.statusCode).toBe(201);
+  
+    const getRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+  
+    const sweetId = getRes.body[0]._id;
+  
+    const updateRes = await request(app)
+      .put(`/api/sweets/${sweetId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        price: 250,
+        quantity: 25,
+      });
+  
+    expect(updateRes.statusCode).toBe(200);
+  });
+  
 });
