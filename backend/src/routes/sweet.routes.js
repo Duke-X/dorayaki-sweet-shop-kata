@@ -54,4 +54,27 @@ router.post("/:id/purchase", authMiddleware, async (req, res) => {
   });
 });
 
+router.post("/:id/restock", authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { quantity } = req.body;
+
+  const sweet = await Sweet.findById(id);
+
+  if (!sweet) {
+    return res.status(404).json({ message: "Sweet not found" });
+  }
+
+  if (quantity <= 0) {
+    return res.status(400).json({ message: "Invalid quantity" });
+  }
+
+  sweet.quantity += quantity;
+  await sweet.save();
+
+  res.status(200).json({
+    message: "Sweet restocked",
+    newQuantity: sweet.quantity,
+  });
+});
+
 module.exports = router;

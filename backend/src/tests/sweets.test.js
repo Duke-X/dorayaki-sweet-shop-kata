@@ -288,4 +288,76 @@ describe("Sweets API - View Sweets", () => {
 
     expect(res.statusCode).toBe(400);
   });
+
+  it("should allow admin to restock a sweet and increase quantity", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+  
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Besan Ladoo",
+        category: "ladoo",
+        price: 220,
+        quantity: 10,
+      });
+  
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+  
+    const sweetId = sweetsRes.body[0]._id;
+  
+    const restockRes = await request(app)
+      .post(`/api/sweets/${sweetId}/restock`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ quantity: 15 });
+  
+    expect(restockRes.statusCode).toBe(200);
+  
+    const verifyRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+  
+    expect(verifyRes.body[0].quantity).toBe(25);
+  });
+
+  it("should block non-admin users from restocking sweets", async () => {
+    const adminToken = jwt.sign(
+      { userId: "admin123", role: "admin" },
+      process.env.JWT_SECRET
+    );
+  
+    const userToken = jwt.sign(
+      { userId: "user123", role: "user" },
+      process.env.JWT_SECRET
+    );
+  
+    await request(app)
+      .post("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Milk Cake",
+        category: "sweet",
+        price: 260,
+        quantity: 5,
+      });
+  
+    const sweetsRes = await request(app)
+      .get("/api/sweets")
+      .set("Authorization", `Bearer ${adminToken}`);
+  
+    const sweetId = sweetsRes.body[0]._id;
+  
+    const res = await request(app)
+      .post(`/api/sweets/${sweetId}/restock`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ quantity: 10 });
+  
+    expect(res.statusCode).toBe(403);
+  });
+  
 });
