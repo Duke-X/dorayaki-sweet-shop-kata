@@ -2,6 +2,7 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const app = require("../app");
+const User = require("../models/User")
 
 beforeAll(async () => {
   await connectDB();
@@ -55,4 +56,21 @@ describe("Auth: User Registration", () => {
 
     expect(res.statusCode).toBe(400);
   });
+
+  it("should store hashed password instead of plain text", async () => {
+    const plainPassword = "mypassword123";
+  
+    await request(app)
+      .post("/api/auth/register")
+      .send({
+        name: "Secure User",
+        email: "secure@mail.com",
+        password: plainPassword,
+      });
+  
+    const user = await User.findOne({ email: "secure@mail.com" });
+  
+    expect(user.password).not.toBe(plainPassword);
+  });
+
 });
