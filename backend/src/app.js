@@ -3,7 +3,13 @@ const authRoutes = require("./routes/auth.routes");
 const authMiddleware = require("./middleware/auth.middleware");
 const sweetRoutes = require("./routes/sweet.routes");
 const adminMiddleware = require("./middleware/admin.middleware");
+const cors = require("cors");
 const app = express();
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true
+}));
 
 app.use(express.json());
 
