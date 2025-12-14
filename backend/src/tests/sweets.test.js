@@ -21,12 +21,22 @@ afterAll(async () => {
   await mongoose.connection.close();
 });
 
+const User = require("../models/User");
+
+// Helper to create token with real user
+const createTestUser = async (role = "user") => {
+    const user = await User.create({
+        name: "Test User",
+        email: `test${Date.now()}@test.com`,
+        password: "password123",
+        role: role
+    });
+    return jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+};
+
 describe("Sweets API - View Sweets", () => {
   it("should return empty array when no sweets exist", async () => {
-    const token = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const token = await createTestUser("user");
 
     const res = await request(app)
       .get("/api/sweets")
@@ -37,10 +47,7 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should allow admin to add a new sweet", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
 
     const res = await request(app)
       .post("/api/sweets")
@@ -50,16 +57,14 @@ describe("Sweets API - View Sweets", () => {
         category: "barfi",
         price: 400,
         quantity: 20,
+        imageUrl: "http://example.com/img.jpg" // Image URL helps if multer is bypassed or we need mock
       });
 
     expect(res.statusCode).toBe(201);
   });
 
   it("should block non-admin users from adding a sweet", async () => {
-    const userToken = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const userToken = await createTestUser("user");
 
     const res = await request(app)
       .post("/api/sweets")
@@ -75,10 +80,7 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should allow admin to update a sweet", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
 
     const createRes = await request(app)
       .post("/api/sweets")
@@ -88,6 +90,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 200,
         quantity: 30,
+        imageUrl: "http://example.com/img.jpg"
       });
 
     expect(createRes.statusCode).toBe(201);
@@ -109,46 +112,10 @@ describe("Sweets API - View Sweets", () => {
     expect(updateRes.statusCode).toBe(200);
   });
 
-  it("should allow admin to update a sweet", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
-
-    const createRes = await request(app)
-      .post("/api/sweets")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        name: "Rasgulla",
-        category: "sweet",
-        price: 200,
-        quantity: 30,
-      });
-
-    expect(createRes.statusCode).toBe(201);
-
-    const getRes = await request(app)
-      .get("/api/sweets")
-      .set("Authorization", `Bearer ${adminToken}`);
-
-    const sweetId = getRes.body[0]._id;
-
-    const updateRes = await request(app)
-      .put(`/api/sweets/${sweetId}`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        price: 250,
-        quantity: 25,
-      });
-
-    expect(updateRes.statusCode).toBe(200);
-  });
+  // DUPLICATE TEST REMOVED (Previous file had two identical "update a sweet" tests)
 
   it("should allow admin to delete a sweet", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
 
     await request(app)
       .post("/api/sweets")
@@ -158,6 +125,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 180,
         quantity: 20,
+        imageUrl: "http://example.com/img.jpg"
       });
 
     const sweetsRes = await request(app)
@@ -180,15 +148,8 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should block non-admin users from deleting a sweet", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
-
-    const userToken = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
+    const userToken = await createTestUser("user");
 
     await request(app)
       .post("/api/sweets")
@@ -198,6 +159,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 220,
         quantity: 30,
+        imageUrl: "http://example.com/img.jpg"
       });
 
     const sweetsRes = await request(app)
@@ -214,15 +176,8 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should allow user to purchase a sweet and reduce quantity", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
-
-    const userToken = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
+    const userToken = await createTestUser("user");
 
     await request(app)
       .post("/api/sweets")
@@ -232,6 +187,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 250,
         quantity: 10,
+        imageUrl: "http://example.com/img.jpg"
       });
 
     const sweetsRes = await request(app)
@@ -255,15 +211,8 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should not allow purchase if quantity is insufficient", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
-
-    const userToken = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
+    const userToken = await createTestUser("user");
 
     await request(app)
       .post("/api/sweets")
@@ -273,6 +222,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 300,
         quantity: 2,
+        imageUrl: "http://example.com/img.jpg"
       });
 
     const sweetsRes = await request(app)
@@ -290,10 +240,7 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should allow admin to restock a sweet and increase quantity", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
   
     await request(app)
       .post("/api/sweets")
@@ -303,6 +250,7 @@ describe("Sweets API - View Sweets", () => {
         category: "ladoo",
         price: 220,
         quantity: 10,
+        imageUrl: "http://example.com/img.jpg"
       });
   
     const sweetsRes = await request(app)
@@ -326,15 +274,8 @@ describe("Sweets API - View Sweets", () => {
   });
 
   it("should block non-admin users from restocking sweets", async () => {
-    const adminToken = jwt.sign(
-      { userId: "admin123", role: "admin" },
-      process.env.JWT_SECRET
-    );
-  
-    const userToken = jwt.sign(
-      { userId: "user123", role: "user" },
-      process.env.JWT_SECRET
-    );
+    const adminToken = await createTestUser("admin");
+    const userToken = await createTestUser("user");
   
     await request(app)
       .post("/api/sweets")
@@ -344,6 +285,7 @@ describe("Sweets API - View Sweets", () => {
         category: "sweet",
         price: 260,
         quantity: 5,
+        imageUrl: "http://example.com/img.jpg"
       });
   
     const sweetsRes = await request(app)

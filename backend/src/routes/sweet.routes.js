@@ -5,21 +5,53 @@ const adminMiddleware = require("../middleware/admin.middleware");
 const upload = require("../middleware/upload.middleware");
 const router = express.Router();
 
+router.get("/search", authMiddleware, async (req, res) => {
+  try {
+    const { name, category, minPrice, maxPrice } = req.query;
+    let query = {};
+
+    if (name) {
+      query.name = { $regex: name, $options: "i" };
+    }
+    if (category) {
+      query.category = { $regex: category, $options: "i" };
+    }
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    const sweets = await Sweet.find(query);
+    res.status(200).json(sweets);
+  } catch (error) {
+    res.status(500).json({ message: "Search failed", error: error.message });
+  }
+});
+
 router.get("/", authMiddleware, async (req, res) => {
   const sweets = await Sweet.find();
   res.status(200).json(sweets);
 });
 
 router.post("/", authMiddleware, adminMiddleware, upload.single("image"), async (req, res) => {
-  const { name, category, price, quantity } = req.body;
+  try {
+    const { name, category, price, quantity, imageUrl: bodyImageUrl } = req.body;
 
-  if (!req.file) {
-    return res.status(400).json({ message: "Image is required" });
+    const imageUrl = req.file ? req.file.path : bodyImageUrl;
+
+    if (!imageUrl) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    // Cloudinary storage automatically puts the url in req.file.path
+    await Sweet.create({ name, category, price, quantity, imageUrl });
+
+    res.status(201).json({ message: "Sweet added successfully" });
+  } catch (error) {
+    console.error("Add Sweet Error:", error);
+    res.status(500).json({ message: "Failed to add sweet. Check server logs (Cloudinary keys?)." });
   }
-
-  await Sweet.create({ name, category, price, quantity, imageUrl: req.file.path });
-
-  res.status(201).json({ message: "Sweet added successfully" });
 });
 
 router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {

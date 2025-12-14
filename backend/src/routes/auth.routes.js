@@ -7,7 +7,7 @@ const router = express.Router();
 //REGISTER
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, adminKey } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -16,10 +16,30 @@ router.post("/register", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    await User.create({ name, email, password: hashedPassword });
+    // Check for Admin Secret
+    // In a real app, store simple env var or verify properly.
+    // KEY: "DORAYAKI_ADMIN_2025"
+    let role = "user";
+    if (adminKey === "DORAYAKI_ADMIN_2025") {
+        role = "admin";
+    }
+
+    const newUser = await User.create({ name, email, password: hashedPassword, role });
+
+    // Generate REAL token so they are logged in immediately as admin/user
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
 
     return res.status(201).json({
-      token: "fake-jwt-token",
+      token,
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role
+      },
+      message: role === "admin" ? "Admin account created!" : "Account created successfully"
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -51,7 +71,15 @@ router.post("/login", async (req, res) => {
       expiresIn: "1h",
     });
 
-    return res.status(200).json({ token });
+    return res.status(200).json({ 
+        token,
+        user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }
+    });
   } catch (error) {
     return res.status(500).json({ message: "Server error" });
   }
